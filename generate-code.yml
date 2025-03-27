@@ -1,0 +1,61 @@
+name: Generate Code with ChatGPT
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Enter the prompt for ChatGPT to generate code'
+        required: true
+        default: 'Generate a Python script that prints "Hello, World!"'
+
+jobs:
+  generate_code:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Install required Python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install openai
+
+      - name: Generate code with ChatGPT
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          import openai
+          import os
+
+          # Initialize OpenAI API client
+          openai.api_key = os.getenv('OPENAI_API_KEY')
+
+          # Get prompt from input
+          prompt = "${{ github.event.inputs.prompt }}"
+
+          # Call OpenAI API to generate code
+          response = openai.Completion.create(
+              model="gpt-4",  # You can use "gpt-3.5-turbo" or any available model
+              prompt=prompt,
+              max_tokens=150,
+              temperature=0.7
+          )
+
+          generated_code = response.choices[0].text.strip()
+
+          # Save the generated code to a file
+          with open('generated_code.py', 'w') as f:
+              f.write(generated_code)
+
+      - name: Commit and push generated code
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add generated_code.py
+          git commit -m "Add generated code from ChatGPT"
+          git push
